@@ -1,7 +1,7 @@
 # Intro
-class : Administering Splunk Enterprise Security 7.0
-date : September 07,08,09 2022
-additional notes of course material : "Administering Splunk Enterprise Security 7.0.pdf"
+- class : Administering Splunk Enterprise Security 7.0
+- date : September 07,08,09 2022
+- additional notes of course material : "Administering Splunk Enterprise Security 7.0.pdf" (non disclosable material)
 
 ## Goals
 - admin ES, not using ES
@@ -126,3 +126,44 @@ slides 122+
 when enabled : make splunk instance a virtual sniffer (capture network data, ~= wireshark : doesn't get full packet, only headers + key fields as configured in splunk stream app)
 - tip : turn on stream app for only X hours on Y hosts when suspicious activities detected on suspicious hosts
 - compatible with SplunkCloud, no need for HF, only need connection to SplunkCloud with stream app installed
+
+# Module 6 : initial configuration
+slides 125+
+## ES lookups
+slides 128+
+examples :
+- cim_cloud_domain_lookup <=> mail domain inclusion/exclusion list
+- intersting_ports_lookup
+-> lot of correlations searches rely on theses lookups
+-> don't change column names
+
+## configure domain analysis
+slides 130+
+- every time someone access a new domain, compare it with domain analysis and add it to a report.
+**recommandation** : limit domain queries to limit volume in domain report
+
+## UBA (user behavior analytics)
+slide 134
+
+## SOAR
+slide 135
+Splunk app for SOAR, enable adaptive responde action to
+- send ES search results to SOAR
+- run playbook in SOAR
+
+## Various tools/settings
+### Incident review in kvstore collection
+slide 136
+- kvstore fastly increase in size
+- cleanup maintenance : slide 137, option to do it in a periodically report
+
+### untriaged incident alert
+slide 138
+notable event that stayed new during more than 48h
+
+### ES config health audit
+slide 139
+
+### ES app customization
+slides 140+
+tip : \`get_delta macro\` : slide 147
