@@ -68,8 +68,61 @@ same info than in "Using Splunk Enterprise Security 7.0" + :
 - setup risk permission : slide 77
 
 # Module 4 : Incident Investigation
-slide 79+
+slides 79+
 - data protection dashboard : 
 - add tab to investigation, not durable for future investigations
 - default : ess_analyst only see their investigations
 - create workbecnh panel for all investigation
+
+# Module 5 : Installation
+slides 98+
+one TA <=> one data type input
+SA <=> supporting addon : Splunk native and additionnal fonctionnalities
+DA <=> domain addon : views, UI ; one domain - one DA
+
+Splunk ES (enterpise security) = DA-ESS-* + SA-* + Splunk_SA_CIM + Splunk_ML_Toolkit + SplunkE...S...Suite
+
+need to download from splunkbase TA's for inputs type (win, *-nix, etc.)
+
+Indexes :
+1. create Splunk_TA_ForIndexers on SHs
+2. install it on indexers **and HFs**
+Splunk_TA_ForIndexers : contains props.conf and transforms.conf and indexes.conf and more
+
+install ES-single instance checklist : slide 105
+tips :
+- deploy Splunk_TA_ForIndexers as disabled, then enable it
+- web.conf : increase max_upload_size to 1024
+- disable unused/old ES addon
+
+install ES-clustered SHs checklist : slide 116
+
+## Splunk_TA_ForIndexers
+Distributed Configuration Management + **auto create Splunk_TA_ForIndexers** : slide 118
+**recommandation** to create and push only once Splunk_TA_ForIndexers:
+- create 2 different apps : one for default index (ES indexes), one for inputs indexes (linux, aws, etc.)
+  - one does only in
+  - HF doesnt need index def, but need time properties
+  - download one with 1st option only (Include index time properties)
+  - download one with 2nd option only (Include index definitions), then rename it to a different spl file  
+- objective :
+  - create and push only once Splunk_TA_ForIndexers
+
+## Splunk_TA_AROnPrem
+**recommandation** :
+- install one HF with this app per site/region/DMZ/etc.
+- objective : allow to run adaptive response from HF to increase success rate of adaptive response (example : ping from same subnet is best than pinging from cloud Splunk instance)
+
+**warning** success status of adaptive response <=> script run successfully **!= ping succeeded**
+
+## Data integrity control
+slides 120+
+- integrity control : apply hash on indexed data
+- hash can be checked : ./splunk check-integrity -index <indexname>
+- **recommandation** : run it as scripted input once per day + setup alert on results**
+
+## Stream addon
+slides 122+
+when enabled : make splunk instance a virtual sniffer (capture network data, ~= wireshark : doesn't get full packet, only headers + key fields as configured in splunk stream app)
+- tip : turn on stream app for only X hours on Y hosts when suspicious activities detected on suspicious hosts
+- compatible with SplunkCloud, no need for HF, only need connection to SplunkCloud with stream app installed
