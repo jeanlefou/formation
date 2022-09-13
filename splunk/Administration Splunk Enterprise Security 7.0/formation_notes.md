@@ -108,6 +108,9 @@ Distributed Configuration Management + **auto create Splunk_TA_ForIndexers** : s
 - objective :
   - create and push only once Splunk_TA_ForIndexers
 
+Note from labo instructions :
+"Select Include _index time properties_ to include the props.conf and transforms.conf files in the package and _Include index definitions_ to include the indexes.conf file in the package. "
+
 ## Splunk_TA_AROnPrem
 **recommandation** :
 - install one HF with this app per site/region/DMZ/etc.
@@ -167,3 +170,77 @@ slide 139
 ### ES app customization
 slides 140+
 tip : \`get_delta macro\` : slide 147
+tip : accelerate some KIs of security posture dashboard
+
+# Module 7 : Validating ES Data
+slides 149+
+- data journey from src to accelerated DM : slide 153
+- tstats cmd : pull data from hpas storage
+- normalization process : slide 156
+- tip : CIM setup page (ES/configure/cim setup) for DM setup in ES settings, easier to use than DM settings in search app
+- https://docs.splunk.com/Documentation/ES/latest/Admin/Dashboardrequirements : "The Enterprise Security dashboards rely on events that conform to the Common Information Model (CIM), and are populated from data model accelerations unless otherwise noted. "
+- initial data verif : slide 161, NB : (1 sourcetype) - (1-* DM)
+- troubleshoot DM acceleration : DM audit dashboard
+- troubleshoot FW : FW audit dashboard (all source permanently send logs, except NetworkSwitch and few others)
+
+# Module 8 : Custom Add-ons
+slides 172+
+
+objective : make custom data src CIM-compliant
+- eval=<regex> <calculate field> <etc.>
+- minimum fields to extract + advise to calculate some of them : https://docs.splunk.com/Documentation/ES/latest/Admin/Dashboardrequirements
+
+use addon builder
+**recommandation** : provide all fields that cannot be mapped into the data model with static entries like NULL N/A and so on.
+
+# Module 9 : tunging correlation searches
+slides 191+
+
+**recommandations** :
+- start ES with with only enabling a small number of correlation search, enable new ones only when the already enabled are mature (IDS/IPS/FW policies improved, correlations searches cloned and sensibility adjusted, etc.)
+- find balance between too many false positive and false negative
+- edit ES artifacts only with ES/configure/content/content management
+- best : 1 search per vCPU, so use scheduling to stay at this ratio (max allowed = 4 searches per vCPU, but perf issues)
+
+slide 202 : mltk_apply_upper doc
+
+# Module 10 : creating correlation searches
+slides 207+
+- scheduling :
+  - RT schedule = run at exact time or skip (!= than normal saved search)
+  - continuous = run at exact time if possible, delay it if not possible but keep the time range
+- tip : add investogation profiles to "create notable event" action
+- slide 231 : export knowledge object to an app, **recommandation** : increment app name , **warning** : if increment and reexport and not all objects are not selected, it will erase them from app
+
+# Module 11 : Asset & Identity Management
+slides 235+
+- SA-IdentityManagement
+- identity and assets managed lookup changes : retroactive (need few minutes for changes to be applied retroactively)
+- asset priority (1st priority on top of list) : if one asset is in multiple asset lookup, then take only the one with higest priority ; same for identity **if** assets/identity are not merged
+- for asset/identity : option to enable case sensitivity, not recommended for most cases
+- enable zone for asset (case where same ip in different network) : slide 252
+- merge asset : slide 253
+- correlation setup : choose to do correlation for all/some/none sourcetypes
+- tip  : don't include all info on identity/asset, especially sensitive ones, personal address -> it too saves space of kvstore collection
+- cidr matching : slide 269 : take the smallest range when merging as it's the most specific range
+- tip : use watchlist for asset/identity, slide 271
+
+# Module 12: Managing Threat Intelligence
+slides 276+
+- threat intel : compare all data in Splunk with list of known threat
+- index=threat_activity -> threat intel DM
+- threat intel types : slide 280 (lists, stix/taxi, openioc, custom)
+- tip : use adaptive response action of correlation search to add custom IOC to threat intel
+- generic intel src : slide 281 (enrich data but not a threat intel)
+
+# Appendix
+- troubleshoot guideline
+- search DM tips
+- one prem deployment guideline : min 16-cores, 32 GiB RAM
+- do not use Monitoring console on ES SH
+- **ES = increase of volumetry on indexer** : slides 323
+- indexers : enable summary replication to improve perf of indexers
+- disable search affinity
+- acceleration of DM : ~x3.4 storage slide 325
+- UC library (ESCU app) : slide 333
+- event sequencing engine : slide 340 ; ~= transaction for events, but it's for correlation search ; sequence are then visible in incident review dashboard
