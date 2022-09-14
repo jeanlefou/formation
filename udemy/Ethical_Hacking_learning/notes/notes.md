@@ -635,5 +635,31 @@ msf6 > resource /home/kali/dev/exploits_files/powerpayload.rc
 ```
 
 - converted payload got detected and deleted by IDS/IPS, again xD
+- source : https://www.udemy.com/course/complete-ethical-hacking-bootcamp-zero-to-mastery module 10, lesson 86
+```
+Note: My Payloads Are Getting Detected By An Antivirus!
 
-<add note of lesson 86 here>
+A game of cat and mouse ..
+
+Viruses and Antiviruses!
+
+We are going to talk about them in the next video but I just want to mention a few things first.
+
+There is no clear way of bypassing antiviruses!
+
+These methods get outdated all the time and new ones occur. However there are things that you can do to make your payload less detected.
+
+1) The best possible thing that you can do is to create your own Payload (code it yourself). Why ? Well if you create it yourself chances are that same code didnt occur before and it will be unknown to the antivirus vendors. Your unique code once compiled will give a completely different binary that isnt in the database of that antivirus.
+
+2) If you dont yet know how to create your own payloads/viruses/backdoors and you are using softwares like Msfvenom or Veil or similar. Make sure to change that payload as much as possible. If there are some random options you can add, make sure to add them (such as program sleeping for X amount of seconds etc.). Then you can use hexeditor that we will see in the next video to change binary a little bit in order to get different file hash which can help you bypass some antiviruses.
+
+3) Keep an eye for new tools that are using to create payloads/make them undetectable. Both TheFatRat and Veil when they came out produced undetectable payloads. But then once tool becomes known and people start using it, those payloads are uploaded to virus total and eventually become known to antiviruses. However new tools come out all the time, so you can keep an eye out once they come out in order to possibly bypass more antiviruses with that new tool!
+
+4) IF you have a source code to the payload, try changing the code a little bit. Try adding a random function inside the code that doesnt do anything. Then once you compile the program afterwards with that random function it will give a completely different binary to you compared to other people creating payload with that tool just because you added that function.
+
+These are just some of the ways, and I mention them in the next video. 2 important things I would take out from this is to:
+
+    Create your own payloads
+
+    Keep yourself updated with new tools
+```
