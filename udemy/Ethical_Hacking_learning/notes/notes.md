@@ -728,3 +728,9 @@ msf6 > search post
 # Section 12 backdoor pydev
 - kali : run server instance (send cmd)
 - victim : run client instance (send cmd output)
+## setup python on win10 test vm
+- install python3
+pip install -U pyinstaller
+- get client.py on vm
+pyinstall client.py --noconsole
+- executable in dist folder, contains exec file, not detected as threat by IDS

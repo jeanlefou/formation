@@ -1,17 +1,14 @@
 import json
 
-def reliable_send(target,data):
+def reliable_send(socket,data):
     json_data = json.dumps(data)
-    target.send(json_data.encode())
+    socket.send(json_data.encode())
 
-def reliable_recv(target):
+def reliable_recv(socket):
     data = ''
     while True:
         try:
-            data = data + target.recv(1024).decode().rstip()
-            #1024 : number of bytes to receive
-            #decode
-            #estip
+            data = data + socket.recv(1024).decode().rstrip()
             return json.loads(data)
         except ValueError:
             continue
