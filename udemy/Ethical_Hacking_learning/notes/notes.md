@@ -732,5 +732,15 @@ msf6 > search post
 - install python3
 pip install -U pyinstaller
 - get client.py on vm
-pyinstall client.py --noconsole
+pyinstall client.py --noconsole --onefile
 - executable in dist folder, contains exec file, not detected as threat by IDS
+
+test backdoor
+```
+download C:\Users\IEUser\Documents\module12\test_doc.txt #OK
+upload /home/kali/dev/formation/udemy/Ethical_Hacking_learning/python_projects/backdoor/moustache.txt #KO
+upload moustache.txt #OK
+dir
+cd ..
+dir #OK
+```
