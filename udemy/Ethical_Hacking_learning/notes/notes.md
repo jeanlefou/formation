@@ -1239,3 +1239,28 @@ SYNOPSIS
 DESCRIPTION
        This program forces any tcp connection made by any given tcp client to follow through proxy (or proxy chain). It is a kind of proxifier.
 ```
+
+## openvpn
+- sudo apt-get install openvpn
+- https://www.vpnbook.com/ / openvpn ; get a certificate bundle
+
+## WhoAmi anonymity tool
+- https://github.com/owerdogan/whoami-project
+
+```
+About the project
+In its simplest and shortest definition, Whoami is a user friendly privacy/anonymity tool with its ease of use and simple interface. Whoami uses 9+ different modules to ensure the highest possible level of anonymity also solves possible problems without disturbing you with the Bug fixer module, which is in development. You can find the descriptions of the modules below and more detailed information on the website.
+Finally, don't forget that there is never a hundred percent security on the internet!
+See the documentation section on the website for detailed information about modules
+
+Description
+Anti mitm 	Automatically bans the attacker when you come under a Man In The Middle attack
+Log killer 	Destroys the log files in system with the overwrite method
+IP changer 	Hides your real ip address by redirecting all network traffic to tor transparent proxy
+Dns change 	Replaces the default dns servers provided by your isp with privacy based servers
+Mac changer 	Replaces each network interface in the system with a fake mac address
+Anti cold boot 	Avoids ram dump by deleting traces in the system
+Timezone changer 	Sets the time in utc to avoid location leaks from the system clock
+Hostname changer 	Replaces the host name with a random name to hide it
+Browser anonymization 	Configures the browser to be privacy focused
+```
